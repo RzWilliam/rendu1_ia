@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prédiction MNIST - IA de Classification</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            color: #333;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #4a5568;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #718096;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .drawing-section, .prediction-section {
+            background: #f7fafc;
+            padding: 25px;
+            border-radius: 15px;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .section-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #2d3748;
+            text-align: center;
+        }
+        
+        #canvas {
+            border: 3px solid #4299e1;
+            border-radius: 10px;
+            cursor: crosshair;
+            display: block;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #4299e1, #3182ce);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(66, 153, 225, 0.4);
+        }
+        
+        button:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .prediction-result {
+            text-align: center;
+            font-size: 3em;
+            font-weight: bold;
+            color: #4299e1;
+            margin: 20px 0;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border-radius: 10px;
+            border: 2px dashed #e2e8f0;
+        }
+        
+        .confidence-bars {
+            margin-top: 20px;
+        }
+        
+        .confidence-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            font-size: 14px;
+        }
+        
+        .digit-label {
+            width: 30px;
+            font-weight: bold;
+            color: #4a5568;
+        }
+        
+        .confidence-bar {
+            flex: 1;
+            height: 20px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            margin: 0 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #48bb78, #38a169);
+            transition: width 0.5s ease;
+            border-radius: 10px;
+        }
+        
+        .confidence-value {
+            width: 50px;
+            text-align: right;
+            font-weight: bold;
+            color: #4a5568;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            color: #4299e1;
+            font-weight: bold;
+        }
+        
+        .status {
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        
+        .status.success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+        
+        .status.error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #fc8181;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e2e8f0;
+            color: #718096;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            button {
+                width: 100%;
+                max-width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Classificateur MNIST</h1>
+        <p class="subtitle">Intelligence Artificielle de reconnaissance de chiffres manuscrits</p>
+        
+        <div class="main-content">
+            <div class="drawing-section">
+                <div class="section-title">Zone de Dessin</div>
+                <canvas id="canvas" width="280" height="280"></canvas>
+                <div class="controls">
+                    <button onclick="clearCanvas()">Effacer</button>
+                    <button onclick="predict()" id="predictBtn">Prédire</button>
+                </div>
+                <div id="status"></div>
+            </div>
+            
+            <div class="prediction-section">
+                <div class="section-title">Résultat de la Prédiction</div>
+                <div id="prediction" class="prediction-result">Dessinez un chiffre</div>
+                <div class="loading" id="loading">Analyse en cours...</div>
+                
+                <div class="confidence-bars" id="confidenceBars">
+                    <!-- Les barres de confiance seront générées dynamiquement -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Développé avec PyTorch • Export ONNX • Inférence côté client avec ONNX.js</p>
+            <p>Modèle entraîné sur le dataset MNIST (60,000 images d'entraînement)</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
